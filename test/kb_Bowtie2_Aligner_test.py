@@ -191,7 +191,6 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
     def getContext(self):
         return self.__class__.ctx
 
-    @unittest.skip("skipped test_bowtie2_aligner_with_sampleset")
     def test_bowtie2_aligner_with_sampleset(self):
         assembly_ref = self.loadAssembly()
         se_lib_ref = self.loadSingleEndReads()
