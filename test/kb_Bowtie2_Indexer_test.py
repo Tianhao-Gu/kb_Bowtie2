@@ -95,7 +95,10 @@ class kb_Bowtie2IndexerTest(unittest.TestCase):
         gfu = GenomeFileUtil(self.callback_url)
         genome_ref = gfu.genbank_to_genome({'file': {'path': genbank_file_path},
                                             'workspace_name': self.getWsName(),
-                                            'genome_name': 'test_genome'
+                                            'genome_name': 'test_genome',
+                                            'source': 'Ensembl',
+                                            'generate_ids_if_needed': 1,
+                                            'generate_missing_genes': 1
                                             })['genome_ref']
         self.__class__.genome_ref = genome_ref
         return genome_ref
