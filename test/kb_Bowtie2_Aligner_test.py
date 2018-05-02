@@ -20,7 +20,7 @@ from kb_Bowtie2.authclient import KBaseAuth as _KBaseAuth
 
 from AssemblyUtil.AssemblyUtilClient import AssemblyUtil
 from ReadsUtils.ReadsUtilsClient import ReadsUtils
-
+from SetAPI.SetAPIServiceClient import SetAPI
 
 class kb_Bowtie2AlignerTest(unittest.TestCase):
 
@@ -53,6 +53,7 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
         cls.serviceImpl = kb_Bowtie2(cls.cfg)
         cls.scratch = cls.cfg['scratch']
         cls.callback_url = os.environ['SDK_CALLBACK_URL']
+        cls.srv_wiz_url = cls.cfg['srv-wiz-url']
 
     @classmethod
     def tearDownClass(cls):
@@ -73,7 +74,6 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
         self.__class__.wsName = wsName
         return wsName
 
-
     def loadSingleEndReads(self):
         if hasattr(self.__class__, 'se_reads_ref'):
             return self.__class__.se_reads_ref
@@ -89,7 +89,6 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
         self.__class__.se_reads_ref = se_reads_ref
         print('Loaded SingleEndReads: ' + se_reads_ref)
         return se_reads_ref
-
 
     def loadPairedEndReads(self):
         if hasattr(self.__class__, 'pe_reads_ref'):
@@ -109,7 +108,6 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
         print('Loaded PairedEndReads: ' + pe_reads_ref)
         return pe_reads_ref
 
-
     def loadAssembly(self):
         if hasattr(self.__class__, 'assembly_ref'):
             return self.__class__.assembly_ref
@@ -125,7 +123,6 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
         print('Loaded Assembly: ' + assembly_ref)
         return assembly_ref
 
-
     def loadSampleSet(self):
         if hasattr(self.__class__, 'sample_set_ref'):
             return self.__class__.sample_set_ref
@@ -140,10 +137,9 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
                            'sample_ids': [pe_reads_ref, pe_reads_ref, pe_reads_ref],
                            'sampleset_desc': None,
                            'sampleset_id': sample_set_name,
-                           'condition': ['c1', 'c2', 'c3'],
+                           'condition': ['ss1', 'ss2', 'ss3'],
                            'source': None
                            }
-
         ss_obj = self.getWsClient().save_objects({'workspace': self.getWsName(),
                                                   'objects': [{'type': 'KBaseRNASeq.RNASeqSampleSet',
                                                                'data': sample_set_data,
@@ -155,6 +151,39 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
         print('Loaded SampleSet: ' + ss_ref)
         return ss_ref
 
+    def loadReadsSet(self):
+        if hasattr(self.__class__, 'reads_set_ref'):
+            return self.__class__.reads_set_ref
+        pe_reads_ref = self.loadPairedEndReads()
+        reads_set_name = 'TestReadsSet'
+        # create the set object
+
+        reads_set_data = {
+            'description': 'Reads Set for testing Bowtie',
+            'items': [{
+                'ref': pe_reads_ref,
+                'label': 'rs1'
+            }, {
+                'ref': pe_reads_ref,
+                'label': 'rs2'
+            }, {
+                'ref': pe_reads_ref,
+                'label': 'rs3'
+            }
+            ]
+        }
+        # test a save
+        set_api = SetAPI(self.srv_wiz_url)
+        res = set_api.save_reads_set_v1({
+            'data': reads_set_data,
+            'output_object_name': reads_set_name,
+            'workspace': self.getWsName()
+        })
+        reads_set_ref = res['set_ref']
+
+        # reads_set_ref = '5264/52/1'
+        print('Loaded ReadsSet: ' + reads_set_ref)
+        return reads_set_ref
 
     def getImpl(self):
         return self.__class__.serviceImpl
@@ -162,8 +191,7 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
     def getContext(self):
         return self.__class__.ctx
 
-
-    def test_bowtie2_aligner(self):
+    def test_bowtie2_aligner_with_sampleset(self):
         assembly_ref = self.loadAssembly()
         se_lib_ref = self.loadSingleEndReads()
         params = {'input_ref': se_lib_ref,
@@ -195,3 +223,38 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
         self.assertIn('report_info', res)
         self.assertIn('report_name', res['report_info'])
         self.assertIn('report_ref', res['report_info'])
+
+
+    def test_bowtie2_aligner_with_readsset(self):
+        assembly_ref = self.loadAssembly()
+        se_lib_ref = self.loadSingleEndReads()
+        params = {'input_ref': se_lib_ref,
+                  'assembly_or_genome_ref': assembly_ref,
+                  'output_obj_name_suffix': 'readsAlignment1',
+                  'output_alignment_suffix': '_some_ext',
+                  'output_workspace': self.getWsName(),
+                  'concurrent_njsw_tasks': 0,
+                  'concurrent_local_tasks': 1}
+        pprint(params)
+        res = self.getImpl().align_reads_to_assembly_app(self.getContext(), params)[0]
+        pprint(res)
+        self.assertIn('report_info', res)
+        self.assertIn('report_name', res['report_info'])
+        self.assertIn('report_ref', res['report_info'])
+
+        reads_set_ref = self.loadReadsSet()
+        params = {'input_ref': reads_set_ref,
+                  'assembly_or_genome_ref': assembly_ref,
+                  'output_obj_name_suffix': 'readsAlignment1',
+                  'output_alignment_suffix': '_some_ext',
+                  'output_workspace': self.getWsName(),
+                  'concurrent_njsw_tasks': 0,
+                  'concurrent_local_tasks': 1}
+        pprint('Running with a ReadsSet')
+        pprint(params)
+        res = self.getImpl().align_reads_to_assembly_app(self.getContext(), params)[0]
+        pprint(res)
+        self.assertIn('report_info', res)
+        self.assertIn('report_name', res['report_info'])
+        self.assertIn('report_ref', res['report_info'])
+

@@ -422,25 +422,19 @@ class Bowtie2Aligner(object):
         obj_type = self.get_type_from_obj_info(info)
         refs = list()
         refs_for_ws_info = list()
-        if "KBaseSets.ReadsSet" in obj_type:
+        if "KBaseSets.ReadsSet" in obj_type or "KBaseRNASeq.RNASeqSampleSet" in obj_type:
             print("Looking up reads references in ReadsSet object")
             set_api = SetAPI(self.srv_wiz_url)
             reads_set = set_api.get_reads_set_v1({'ref': ref,
-                                                  'include_item_info': 0
+                                                  'include_item_info': 0,
+                                                  'include_set_item_ref_paths': 1
                                                   })
+
             for reads in reads_set["data"]["items"]:
-                refs.append({'ref': reads['ref'],
+                refs.append({'ref': reads['ref_path'],
                              'condition': reads['label']
                              })
-                refs_for_ws_info.append({'ref': reads['ref']})
-        elif "KBaseRNASeq.RNASeqSampleSet" in obj_type:
-            print("Looking up reads references in RNASeqSampleSet object")
-            sample_set = self.ws.get_objects2({"objects": [{"ref": ref}]})["data"][0]["data"]
-            for i in range(len(sample_set["sample_ids"])):
-                refs.append({'ref': sample_set["sample_ids"][i],
-                             'condition': sample_set["condition"][i]
-                             })
-                refs_for_ws_info.append({'ref': sample_set["sample_ids"][i]})
+                refs_for_ws_info.append({'ref': reads['ref_path']})
         else:
             raise ValueError("Unable to fetch reads reference from object {} "
                              "which is a {}".format(ref, obj_type))
@@ -468,8 +462,6 @@ class Bowtie2Aligner(object):
             refs[k]['alignment_output_name'] = name
 
         return refs
-
-
 
     def determine_input_info(self, validated_params):
         ''' get info on the input_ref object and determine if we run once or run on a set '''
