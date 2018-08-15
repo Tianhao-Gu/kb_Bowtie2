@@ -238,6 +238,8 @@ class Bowtie2Aligner(object):
         if 'maxins' in validated_params:
             options.extend(['--maxins', str(validated_params['maxins'])])
 
+        options.extend(['-a'])  # report all distinct reads
+
         # unfortunately, bowtie2 expects the index files to be in the current directory, and
         # you cannot configure it otherwise.  So run bowtie out of the index directory, but
         # place the output SAM file somewhere else
