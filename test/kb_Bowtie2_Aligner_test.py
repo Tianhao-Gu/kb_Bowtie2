@@ -21,6 +21,9 @@ from kb_Bowtie2.authclient import KBaseAuth as _KBaseAuth
 from AssemblyUtil.AssemblyUtilClient import AssemblyUtil
 from ReadsUtils.ReadsUtilsClient import ReadsUtils
 from SetAPI.SetAPIServiceClient import SetAPI
+from DataFileUtil.DataFileUtilClient import DataFileUtil
+from GenomeFileUtil.GenomeFileUtilClient import GenomeFileUtil
+
 
 class kb_Bowtie2AlignerTest(unittest.TestCase):
 
@@ -55,6 +58,9 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
         cls.callback_url = os.environ['SDK_CALLBACK_URL']
         cls.srv_wiz_url = cls.cfg['srv-wiz-url']
 
+        cls.dfu = DataFileUtil(cls.callback_url)
+        cls.gfu = GenomeFileUtil(cls.callback_url)
+
     @classmethod
     def tearDownClass(cls):
         if hasattr(cls, 'wsName'):
@@ -78,8 +84,8 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
         if hasattr(self.__class__, 'se_reads_ref'):
             return self.__class__.se_reads_ref
         # return '23735/2/1'
-        fq_path = os.path.join(self.scratch, 'reads_1_se.fq')
-        shutil.copy(os.path.join('data', 'bt_test_data', 'reads_1.fq'), fq_path)
+        fq_path = os.path.join(self.scratch, 'extracted_WT_rep1.fastq')
+        shutil.copy(os.path.join('data', 'bt_test_data', 'extracted_WT_rep1.fastq'), fq_path)
 
         ru = ReadsUtils(self.callback_url)
         se_reads_ref = ru.upload_reads({'fwd_file': fq_path,
@@ -107,6 +113,29 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
         self.__class__.pe_reads_ref = pe_reads_ref
         print('Loaded PairedEndReads: ' + pe_reads_ref)
         return pe_reads_ref
+
+    def loadGenome(self):
+        if hasattr(self.__class__, 'genome_ref'):
+            return self.__class__.genome_ref
+
+        test_gbk_file = os.path.join("data", "bt_test_data", "at_chrom1_section.gbk")
+        gbk_file = os.path.join(self.scratch, os.path.basename(test_gbk_file))
+        shutil.copy(test_gbk_file, gbk_file)
+
+        genome_ref = self.gfu.genbank_to_genome({
+            "file": {
+                "path": gbk_file
+            },
+            "genome_name": 'my_test_genome',
+            "workspace_name": self.getWsName(),
+            "source": "Ensembl",
+            "type": "User upload",
+            "generate_ids_if_needed": 1
+        }).get('genome_ref')
+
+        self.__class__.genome_ref = genome_ref
+        print('Loaded Genome: ' + genome_ref)
+        return genome_ref
 
     def loadAssembly(self):
         if hasattr(self.__class__, 'assembly_ref'):
@@ -193,9 +222,10 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
 
     def test_bowtie2_aligner_with_sampleset(self):
         assembly_ref = self.loadAssembly()
+        genome_ref = self.loadGenome()
         se_lib_ref = self.loadSingleEndReads()
         params = {'input_ref': se_lib_ref,
-                  'assembly_or_genome_ref': assembly_ref,
+                  'assembly_or_genome_ref': genome_ref,
                   'output_obj_name_suffix': 'readsAlignment1',
                   'output_alignment_suffix': '_some_ext',
                   'output_workspace': self.getWsName(),
@@ -207,6 +237,16 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
         self.assertIn('report_info', res)
         self.assertIn('report_name', res['report_info'])
         self.assertIn('report_ref', res['report_info'])
+
+        obj_ref = res.get('output_info').get('upload_results').get('obj_ref')
+        obj_data = self.dfu.get_objects(
+            {"object_refs": [obj_ref]})['data'][0]['data']
+        align_stats = obj_data.get('alignment_stats')
+        self.assertEqual(align_stats.get('total_reads'), 15254)
+        self.assertEqual(align_stats.get('mapped_reads'), 15205)
+        self.assertEqual(align_stats.get('unmapped_reads'), 49)
+        self.assertEqual(align_stats.get('singletons'), 4835)
+        self.assertEqual(align_stats.get('multiple_alignments'), 10370)
 
         ss_ref = self.loadSampleSet()
         params = {'input_ref': ss_ref,
@@ -223,7 +263,6 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
         self.assertIn('report_info', res)
         self.assertIn('report_name', res['report_info'])
         self.assertIn('report_ref', res['report_info'])
-
 
     def test_bowtie2_aligner_with_readsset(self):
         assembly_ref = self.loadAssembly()
@@ -257,4 +296,3 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
         self.assertIn('report_info', res)
         self.assertIn('report_name', res['report_info'])
         self.assertIn('report_ref', res['report_info'])
-
