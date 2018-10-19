@@ -1,3 +1,6 @@
+### Version 0.4.2
+- updated citation to PLOS format
+
 ### Version 0.4.1
 - always using [-a] option for bowtie2
 
