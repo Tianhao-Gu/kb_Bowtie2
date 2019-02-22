@@ -321,6 +321,10 @@ class Bowtie2Aligner(object):
             if result_package['run_context']['location'] == 'njsw':
                 ran_njsw += 1
 
+        if n_error:
+            print('Batch result:\n{}'.format(batch_result))
+            raise ValueError('One or more Reads failed to align.')
+
         # Save the alignment set
         alignment_set_data = {'description': '', 'items': items}
         alignment_set_save_params = {'data': alignment_set_data,
