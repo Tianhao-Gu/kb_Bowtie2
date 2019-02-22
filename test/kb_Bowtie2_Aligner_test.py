@@ -140,7 +140,7 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
     def loadAssembly(self):
         if hasattr(self.__class__, 'assembly_ref'):
             return self.__class__.assembly_ref
-        # return '23735/1/1'
+
         fasta_path = os.path.join(self.scratch, 'test_ref.fa')
         shutil.copy(os.path.join('data', 'bt_test_data', 'test_ref.fa'), fasta_path)
         au = AssemblyUtil(self.callback_url)
