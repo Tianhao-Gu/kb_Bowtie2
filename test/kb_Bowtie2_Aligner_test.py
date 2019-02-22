@@ -73,7 +73,7 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
     def getWsName(self):
         if hasattr(self.__class__, 'wsName'):
             return self.__class__.wsName
-        # return 'test_kb_Bowtie2_1499812859552'
+
         suffix = int(time.time() * 1000)
         wsName = "test_kb_Bowtie2_" + str(suffix)
         ret = self.getWsClient().create_workspace({'workspace': wsName})  # noqa
@@ -83,7 +83,7 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
     def loadSingleEndReads(self):
         if hasattr(self.__class__, 'se_reads_ref'):
             return self.__class__.se_reads_ref
-        # return '23735/2/1'
+
         fq_path = os.path.join(self.scratch, 'extracted_WT_rep1.fastq')
         shutil.copy(os.path.join('data', 'bt_test_data', 'extracted_WT_rep1.fastq'), fq_path)
 
@@ -99,7 +99,7 @@ class kb_Bowtie2AlignerTest(unittest.TestCase):
     def loadPairedEndReads(self):
         if hasattr(self.__class__, 'pe_reads_ref'):
             return self.__class__.pe_reads_ref
-        # return '23735/3/1'
+
         fq_path1 = os.path.join(self.scratch, 'reads_1.fq')
         shutil.copy(os.path.join('data', 'bt_test_data', 'reads_1.fq'), fq_path1)
         fq_path2 = os.path.join(self.scratch, 'reads_2.fq')
